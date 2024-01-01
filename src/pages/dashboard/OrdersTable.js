@@ -1,32 +1,15 @@
 import PropTypes from 'prop-types';
-import { useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 // material-ui
-import { Box, Link, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 
 // third-party
 import NumberFormat from 'react-number-format';
-
+import { Search as SearchIcon } from '@mui/icons-material';
 // project import
 import Dot from 'components/@extended/Dot';
-
-function createData(trackingNo, name, fat, carbs, protein) {
-  return { trackingNo, name, fat, carbs, protein };
-}
-
-const rows = [
-  createData(84564564, 'Camera Lens', 40, 2, 40570),
-  createData(98764564, 'Laptop', 300, 0, 180139),
-  createData(98756325, 'Mobile', 355, 1, 90989),
-  createData(98652366, 'Handset', 50, 1, 10239),
-  createData(13286564, 'Computer Accessories', 100, 1, 83348),
-  createData(86739658, 'TV', 99, 0, 410780),
-  createData(13256498, 'Keyboard', 125, 2, 70999),
-  createData(98753263, 'Mouse', 89, 2, 10570),
-  createData(98753275, 'Desktop', 185, 1, 98063),
-  createData(98753291, 'Chair', 100, 0, 14001)
-];
+import { Avatar, InputAdornment, TableSortLabel, TextField } from '../../../node_modules/@mui/material/index';
 
 function descendingComparator(a, b, orderBy) {
   if (b[orderBy] < a[orderBy]) {
@@ -58,41 +41,56 @@ function stableSort(array, comparator) {
 
 const headCells = [
   {
-    id: 'trackingNo',
-    align: 'left',
-    disablePadding: false,
-    label: 'Tracking No.'
-  },
-  {
     id: 'name',
     align: 'left',
-    disablePadding: true,
-    label: 'Product Name'
+    disablePadding: false,
+    label: 'Name'
   },
   {
-    id: 'fat',
+    id: 'marketCapUsd',
+    align: 'left',
+    disablePadding: true,
+    label: 'Market Cap (USD)'
+  },
+  {
+    id: 'volumeUsd24Hr',
     align: 'right',
     disablePadding: false,
-    label: 'Total Order'
+    label: 'Volume (USD - 24Hr)'
   },
   {
-    id: 'carbs',
+    id: 'priceUsd',
     align: 'left',
     disablePadding: false,
-
-    label: 'Status'
+    label: 'Price (USD)'
   },
   {
-    id: 'protein',
+    id: 'changePercent24Hr',
     align: 'right',
     disablePadding: false,
-    label: 'Total Amount'
+    label: 'Change Percent (24Hr)'
+  },
+  {
+    id: 'vwap24Hr',
+    align: 'right',
+    disablePadding: false,
+    label: 'VWAP (24Hr)'
+  },
+  {
+    id: 'status',
+    align: 'right',
+    disablePadding: false,
+    label: 'Status'
   }
 ];
 
 // ==============================|| ORDER TABLE - HEADER ||============================== //
 
-function OrderTableHead({ order, orderBy }) {
+function OrderTableHead({ order, orderBy, onRequestSort }) {
+  const createSortHandler = (property) => (event) => {
+    onRequestSort(event, property);
+  };
+
   return (
     <TableHead>
       <TableRow>
@@ -103,7 +101,14 @@ function OrderTableHead({ order, orderBy }) {
             padding={headCell.disablePadding ? 'none' : 'normal'}
             sortDirection={orderBy === headCell.id ? order : false}
           >
-            {headCell.label}
+            <TableSortLabel
+              active={orderBy === headCell.id}
+              direction={orderBy === headCell.id ? order : 'asc'}
+              onClick={createSortHandler(headCell.id)}
+            >
+              {headCell.label}
+              {orderBy === headCell.id ? <Box component="span">{order === 'desc' ? 'sorted descending' : 'sorted ascending'}</Box> : null}
+            </TableSortLabel>
           </TableCell>
         ))}
       </TableRow>
@@ -113,7 +118,8 @@ function OrderTableHead({ order, orderBy }) {
 
 OrderTableHead.propTypes = {
   order: PropTypes.string,
-  orderBy: PropTypes.string
+  orderBy: PropTypes.string,
+  onRequestSort: PropTypes.func
 };
 
 // ==============================|| ORDER TABLE - STATUS ||============================== //
@@ -122,22 +128,15 @@ const OrderStatus = ({ status }) => {
   let color;
   let title;
 
-  switch (status) {
-    case 0:
-      color = 'warning';
-      title = 'Pending';
-      break;
-    case 1:
-      color = 'success';
-      title = 'Approved';
-      break;
-    case 2:
-      color = 'error';
-      title = 'Rejected';
-      break;
-    default:
-      color = 'primary';
-      title = 'None';
+  if (status.includes('-')) {
+    title = '----';
+    color = 'error';
+  } else if (status === 0) {
+    color = 'warning';
+    title = '';
+  } else {
+    title = '----';
+    color = 'success';
   }
 
   return (
@@ -149,20 +148,92 @@ const OrderStatus = ({ status }) => {
 };
 
 OrderStatus.propTypes = {
-  status: PropTypes.number
+  status: PropTypes.string
 };
 
 // ==============================|| ORDER TABLE ||============================== //
-
-export default function OrderTable() {
-  const [order] = useState('asc');
-  const [orderBy] = useState('trackingNo');
+OrdersTable.propTypes = {
+  setSelectedCoin: PropTypes.func.isRequired
+};
+export default function OrdersTable({ setSelectedCoin }) {
+  const [order, setOrder] = useState('asc');
+  const [orderBy, setOrderBy] = useState('rank');
   const [selected] = useState([]);
+  const [cryptoData, setCryptoData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const isSelected = (trackingNo) => selected.indexOf(trackingNo) !== -1;
+  const fetchData = async () => {
+    try {
+      const response = await fetch('https://api.coincap.io/v2/assets');
+      const data = await response.json();
+      setCryptoData(data.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleRequestSort = (event, property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  const isSelected = (id) => selected.indexOf(id) !== -1;
+
+  const filteredCryptoData = cryptoData.filter((row) => {
+    const searchTerms = searchTerm.toLowerCase().split(' ');
+    return searchTerms.every((term) => Object.values(row).some((value) => String(value).toLowerCase().includes(term)));
+  });
+  const handleSelectCoin = (selectedCoin) => {
+    setSelectedCoin(selectedCoin);
+    console.log(selectedCoin);
+  };
+  function formatPercentage(percentage) {
+    if (isNaN(percentage)) {
+      return 'Invalid percentage';
+    }
+
+    const roundedPercentage = (percentage * 100).toFixed(2);
+    return `${Math.abs(roundedPercentage)}%`;
+  }
+  function formatNumberWithSuffix(number) {
+    if (isNaN(number)) {
+      return 'Invalid number';
+    }
+
+    if (number >= 1e12) {
+      return (number / 1e12).toFixed(2) + 'T';
+    } else if (number >= 1e9) {
+      return (number / 1e9).toFixed(2) + 'B';
+    } else if (number >= 1e6) {
+      return (number / 1e6).toFixed(2) + 'M';
+    } else if (number >= 1e3) {
+      return (number / 1e3).toFixed(2) + 'K';
+    } else {
+      return number.toFixed(2);
+    }
+  }
   return (
     <Box>
+      <TextField
+        fullWidth
+        margin="normal"
+        variant="outlined"
+        placeholder="Search..."
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          )
+        }}
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
       <TableContainer
         sx={{
           width: '100%',
@@ -184,12 +255,10 @@ export default function OrderTable() {
             }
           }}
         >
-          <OrderTableHead order={order} orderBy={orderBy} />
+          <OrderTableHead order={order} orderBy={orderBy} onRequestSort={handleRequestSort} />
           <TableBody>
-            {stableSort(rows, getComparator(order, orderBy)).map((row, index) => {
-              const isItemSelected = isSelected(row.trackingNo);
-              const labelId = `enhanced-table-checkbox-${index}`;
-
+            {stableSort(filteredCryptoData, getComparator(order, orderBy)).map((row) => {
+              const isItemSelected = isSelected(row.id);
               return (
                 <TableRow
                   hover
@@ -197,21 +266,65 @@ export default function OrderTable() {
                   sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                   aria-checked={isItemSelected}
                   tabIndex={-1}
-                  key={row.trackingNo}
+                  key={row.id}
                   selected={isItemSelected}
                 >
-                  <TableCell component="th" id={labelId} scope="row" align="left">
-                    <Link color="secondary" component={RouterLink} to="">
-                      {row.trackingNo}
-                    </Link>
+                  <TableCell
+                    onClick={() => {
+                      handleSelectCoin(row.id);
+                    }}
+                    align="left"
+                  >
+                    <Avatar src={`${process.env.PUBLIC_URL}/icons/${row.symbol.toLowerCase()}@2x.png`} />
+                    <span>{row.name} </span>
                   </TableCell>
-                  <TableCell align="left">{row.name}</TableCell>
-                  <TableCell align="right">{row.fat}</TableCell>
-                  <TableCell align="left">
-                    <OrderStatus status={row.carbs} />
+                  <TableCell
+                    onClick={() => {
+                      handleSelectCoin(row.id);
+                    }}
+                    align="left"
+                  >
+                    {formatNumberWithSuffix(row.marketCapUsd)}
                   </TableCell>
-                  <TableCell align="right">
-                    <NumberFormat value={row.protein} displayType="text" thousandSeparator prefix="$" />
+                  <TableCell
+                    onClick={() => {
+                      handleSelectCoin(row.id);
+                    }}
+                    align="center"
+                  >
+                    {formatNumberWithSuffix(row.volumeUsd24Hr)}
+                  </TableCell>
+                  <TableCell
+                    onClick={() => {
+                      handleSelectCoin(row.id);
+                    }}
+                    align="left"
+                  >
+                    <NumberFormat value={row.priceUsd} displayType="text" thousandSeparator prefix="$" />
+                  </TableCell>
+                  <TableCell
+                    onClick={() => {
+                      handleSelectCoin(row.id);
+                    }}
+                    align="center"
+                  >
+                    {formatPercentage(row.changePercent24Hr)}
+                  </TableCell>
+                  <TableCell
+                    onClick={() => {
+                      handleSelectCoin(row.id);
+                    }}
+                    align="right"
+                  >
+                    {row.vwap24Hr}
+                  </TableCell>
+                  <TableCell
+                    onClick={() => {
+                      handleSelectCoin(row.id);
+                    }}
+                    align="right"
+                  >
+                    <OrderStatus status={row.changePercent24Hr} />
                   </TableCell>
                 </TableRow>
               );

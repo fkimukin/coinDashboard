@@ -11,7 +11,7 @@ import { RiseOutlined, FallOutlined } from '@ant-design/icons';
 import YourSvgFile from './chart.svg';
 // ==============================|| STATISTICS - ECOMMERCE CARD  ||============================== //
 
-const AnalyticEcommerce = ({ color, title, count, percentage, isLoss, extra }) => (
+const AnalyticEcommerce = ({ color, title, count, percentage, isLoss/*,  extra  */}) => (
   <MainCard contentSX={{ p: 2.25 }}>
     <Stack spacing={0.5}>
       <Grid container alignItems="center">
@@ -51,11 +51,11 @@ const AnalyticEcommerce = ({ color, title, count, percentage, isLoss, extra }) =
     </Stack>
     <Box sx={{ pt: 2.25 }}>
       <Typography variant="caption" color="textSecondary">
-        You made an extra{' '}
+        {/* You made an extra{' '} */}
         <Typography component="span" variant="caption" sx={{ color: `${color || 'primary'}.main` }}>
-          {extra}
+         {/*  {extra} */}
         </Typography>{' '}
-        this year
+        {/* this year */}
       </Typography>
     </Box>
   </MainCard>
