@@ -2,15 +2,14 @@ import PropTypes from 'prop-types';
 import { useState, useEffect } from 'react';
 
 // material-ui
-import { Box, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from '@mui/material';
 
 // third-party
-import NumberFormat from 'react-number-format';
 import { Search as SearchIcon } from '@mui/icons-material';
 // project import
-import Dot from 'components/@extended/Dot';
 import { Avatar, InputAdornment, TableSortLabel, TextField } from '../../../node_modules/@mui/material/index';
-
+import Green from './green.svg';
+import Red from './red.svg';
 function descendingComparator(a, b, orderBy) {
   if (b[orderBy] < a[orderBy]) {
     return -1;
@@ -125,25 +124,18 @@ OrderTableHead.propTypes = {
 // ==============================|| ORDER TABLE - STATUS ||============================== //
 
 const OrderStatus = ({ status }) => {
-  let color;
-  let title;
+  let color = '';
 
   if (status.includes('-')) {
-    title = '----';
-    color = 'error';
-  } else if (status === 0) {
-    color = 'warning';
-    title = '';
+    color = Red;
   } else {
-    title = '----';
-    color = 'success';
+    color = Green;
   }
 
   return (
-    <Stack direction="row" spacing={1} alignItems="center">
-      <Dot color={color} />
-      <Typography>{title}</Typography>
-    </Stack>
+    
+      <img src={color} alt="Status" style={{ width: '50px', height: '50' }} />
+    
   );
 };
 
@@ -192,16 +184,19 @@ export default function OrdersTable({ setSelectedCoin }) {
     setSelectedCoin(selectedCoin);
     console.log(selectedCoin);
   };
-  function formatPercentage(percentage) {
-    if (isNaN(percentage)) {
-      return 'Invalid percentage';
+  function formatPercentage(number) {
+    const parsedNumber = parseFloat(number);
+
+    if (isNaN(parsedNumber) || typeof parsedNumber !== 'number') {
+      return 'Invalid number';
     }
 
-    const roundedPercentage = (percentage * 100).toFixed(2);
-    return `${Math.abs(roundedPercentage)}%`;
+    const formattedNumber = parsedNumber.toFixed(1);
+    return `${formattedNumber}%`;
   }
-  function formatNumberWithSuffix(number) {
-    if (isNaN(number)) {
+  function formatNumberWithSuffix(value) {
+    const number = parseFloat(value);
+    if (isNaN(number) || typeof number !== 'number') {
       return 'Invalid number';
     }
 
@@ -300,7 +295,7 @@ export default function OrdersTable({ setSelectedCoin }) {
                     }}
                     align="left"
                   >
-                    <NumberFormat value={row.priceUsd} displayType="text" thousandSeparator prefix="$" />
+                    ${formatNumberWithSuffix(row.priceUsd)}
                   </TableCell>
                   <TableCell
                     onClick={() => {

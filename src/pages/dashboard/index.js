@@ -261,7 +261,7 @@ const DashboardDefault = () => {
               <ListItemSecondaryAction>
                 <Stack alignItems="flex-end">
                   <Typography variant="subtitle1" noWrap>
-                    {selectedCoinData.changePercent24Hr}
+                    {formatPercentage(selectedCoinData.changePercent24Hr)}
                   </Typography>
                   <Typography variant="h6" color="secondary" noWrap></Typography>
                 </Stack>
