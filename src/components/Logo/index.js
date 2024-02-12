@@ -7,8 +7,8 @@ import { useDispatch, useSelector } from 'react-redux';
 
 // project import
 //import Logo from './Logo';
-import config from 'config';
-import { activeItem } from 'store/reducers/menu';
+import config from '../../config';
+import { activeItem } from '../../store/reducers/menu';
 
 // ==============================|| MAIN LOGO ||============================== //
 

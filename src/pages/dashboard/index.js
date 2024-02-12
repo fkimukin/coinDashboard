@@ -6,8 +6,8 @@ import { Box, Button, Grid, List, ListItemButton, ListItemSecondaryAction, ListI
 // project import
 import OrdersTable from './OrdersTable';
 import IncomeAreaChart from './IncomeAreaChart';
-import MainCard from 'components/MainCard';
-import AnalyticEcommerce from 'components/cards/statistics/AnalyticEcommerce';
+import MainCard from '../../components/MainCard';
+import AnalyticEcommerce from '../../components/cards/statistics/AnalyticEcommerce';
 import axios from 'axios';
 
 // avatar style

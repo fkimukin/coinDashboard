@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import { Box, Chip, Grid, Stack, Typography } from '@mui/material';
 
 // project import
-import MainCard from 'components/MainCard';
+import MainCard from '../../MainCard';
 
 // assets
 import { RiseOutlined, FallOutlined } from '@ant-design/icons';
